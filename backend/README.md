@@ -28,7 +28,7 @@ Momentum is a Cognitive Translation Layer built for the USAII Global AI Hackatho
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Requirements Installation
 
@@ -57,15 +57,15 @@ Launch the local Uvicorn development server:
 uvicorn main:app --reload
 ```
 
-- The API will run locally at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+- The API will run locally at `http://127.0.0.1:8000`.
 
 ---
 
-## 🧪 Testing the API
+## Testing the API
 
 ### Interactive API Docs (Swagger UI)
 
-Visit [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) in your browser. You can click on any route, click "Try it out", edit the JSON inputs, and run real queries against the model.
+Visit `http://127.0.0.1:8000/docs` in your browser. You can click on any route, click "Try it out", edit the JSON inputs, and run real queries against the model.
 
 ### Running Automated Unit Tests
 
@@ -77,12 +77,15 @@ pytest backend/test_backend.py
 
 ---
 
-## 📋 What We Need to Do (Next Steps)
+## What We Need to Do Next!
 
-- [ ] **Frontend Initialization**: Set up the Next.js frontend structure inside the `frontend` directory using App Router and Tailwind CSS (pure Vanilla Javascript, no TypeScript).
-- [ ] **Local Sentiment Model**: Integrate `Transformers.js` (`Xenova/all-MiniLM-L6-v2`) in Screen 1 of the frontend to analyze tone and word density, passing these metrics as metadata to `POST /analyze-ambiguity/`.
-- [ ] **Frontend-Backend API Connection**: Connect the frontend Single Page Application (SPA) state flow to query:
+- **Frontend Initialization**: Set up the Next.js frontend structure inside the `frontend` directory using App Router and Tailwind CSS (pure Vanilla Javascript, no TypeScript).
+
+- **Local Sentiment Model**: Integrate `Transformers.js` (`Xenova/all-MiniLM-L6-v2`) in Screen 1 of the frontend to analyze tone and word density, passing these metrics as metadata to `POST /analyze-ambiguity/`.
+
+- **Frontend-Backend API Connection**: Connect the frontend Single Page Application (SPA) state flow to query:
   1. `POST /analyze-ambiguity/` when submitting the Brain Dump.
   2. `POST /generate-plan/` once the user confirms/edits all cards in the Ambiguity Ledger.
-- [ ] **Interactive Assumption Cards**: Enforce the block in Screen 2 that prevents the user from proceeding until every single card has been manually checked or edited.
-- [ ] **Final QA**: Perform full journey end-to-end checks utilizing the synthetic user test scenarios.
+
+- **Interactive Assumption Cards**: Enforce the block in Screen 2 that prevents the user from proceeding until every single card has been manually checked or edited.
+- **Final QA**: Perform full journey end-to-end checks utilizing the synthetic user test scenarios.
