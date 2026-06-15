@@ -1,4 +1,4 @@
-# Claude API Prompts & Engineering Profiles
+# Gemini API Prompts & Engineering Profiles
 
 ## Stage 1 System Prompt — Ambiguity Filter
 
