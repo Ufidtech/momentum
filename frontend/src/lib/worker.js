@@ -1,48 +1,56 @@
-// 1. Polyfill process.env to stop the worker from crashing
-self.process = { env: {} };
+import { pipeline } from "@xenova/transformers";
 
-import { pipeline, env } from '@xenova/transformers';
+let extractorPromise = null;
 
-// Skip local caching checks to pull directly from HuggingFace
-env.allowLocalModels = false;
-
-class PipelineSingleton {
-    static task = 'feature-extraction';
-    static model = 'Xenova/all-MiniLM-L6-v2';
-    static instance = null;
-
-    static async getInstance(progress_callback = null) {
-        if (this.instance === null) {
-            this.instance = pipeline(this.task, this.model, { progress_callback });
-        }
-        return this.instance;
+async function getExtractor() {
+    if (!extractorPromise) {
+        extractorPromise = pipeline(
+            "feature-extraction",
+            "Xenova/all-MiniLM-L6-v2"
+        );
     }
+    return extractorPromise;
 }
 
-self.addEventListener('message', async (event) => {
-    const { text } = event.data;
+self.addEventListener("message", async (event) => {
+    const { id, text } = event.data || {};
 
     try {
-        const wordCount = text.trim().split(/\s+/).length;
+        const extractor = await getExtractor();
 
-        const extractor = await PipelineSingleton.getInstance((x) => {
-            self.postMessage({ status: 'progress', data: x });
-        });
+        // Generate embeddings locally
+        const output = await extractor(text, { pooling: "mean", normalize: true });
 
-        const output = await extractor(text, { pooling: 'mean', normalize: true });
+        // Simple local metadata signal derived from embedding + text properties
+        const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const charCount = text.length;
 
-        const rawScore = Math.abs(output.data[0]);
-        const sentimentScore = parseFloat((rawScore * 10).toFixed(2));
+        // Convert embedding magnitude to a lightweight heuristic score.
+        // Keep it deterministic and bounded for backend metadata.
+        const values = Array.isArray(output?.data) ? output.data : [];
+        const magnitude = values.length
+            ? values.reduce((sum, n) => sum + Math.abs(n), 0) / values.length
+            : 0;
+
+        const sentimentScore = Math.max(
+            0,
+            Math.min(1, Number((1 - Math.min(magnitude / 10, 1)).toFixed(3)))
+        );
 
         self.postMessage({
-            status: 'complete',
-            metadata: {
+            id,
+            ok: true,
+            payload: {
+                sentiment_score: sentimentScore,
                 word_count: wordCount,
-                sentiment_score: sentimentScore
-            }
+                char_count: charCount,
+            },
         });
-
     } catch (error) {
-        self.postMessage({ status: 'error', error: error.message });
+        self.postMessage({
+            id,
+            ok: false,
+            error: error?.message || "Worker analysis failed",
+        });
     }
 });
