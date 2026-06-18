@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function MomentumApp() {
   const [currentScreen, setCurrentScreen] = useState(1);
   const [brainDump, setBrainDump] = useState("");
@@ -105,7 +107,7 @@ export default function MomentumApp() {
 
       setLoadingMessage("Connecting to AI Layer...");
 
-      const response = await fetch("http://localhost:8000/analyze-ambiguity/", {
+      const response = await fetch(`${API_BASE_URL}/analyze-ambiguity/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -172,8 +174,7 @@ export default function MomentumApp() {
     );
   };
 
-  const allAssumptionsConfirmed =
-    assumptions.length > 0 && assumptions.every((a) => a.isConfirmed);
+  const allAssumptionsConfirmed = assumptions.every((a) => a.isConfirmed);
 
   const handleGeneratePlan = async () => {
     if (!allAssumptionsConfirmed) return;
@@ -181,7 +182,7 @@ export default function MomentumApp() {
     setIsGeneratingPlan(true);
 
     try {
-      const response = await fetch("http://localhost:8000/generate-plan/", {
+      const response = await fetch(`${API_BASE_URL}/generate-plan/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
