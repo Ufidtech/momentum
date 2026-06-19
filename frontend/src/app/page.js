@@ -197,12 +197,15 @@ export default function MomentumApp() {
               {brainDump.length} characters
             </span>
             <button
-              onClick={handleAnalyzeThoughts}
-              disabled={!brainDump.trim() || isAnalyzing}
-              className={`px-6 py-3 font-medium rounded-lg transition-all ${!brainDump.trim() || isAnalyzing
+              onClick={() => {
+                if (!brainDump.trim() || isAnalyzing) return;
+                handleAnalyzeThoughts();
+              }}
+              className={`px-6 py-3 font-medium rounded-lg transition-all ${
+                !brainDump.trim() || isAnalyzing
                   ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                  : "bg-white text-black active:bg-zinc-300"
-                }`}
+                  : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
+              }`}
             >
               {isAnalyzing ? loadingMessage : "Analyze My Thoughts"}
             </button>
@@ -228,10 +231,11 @@ export default function MomentumApp() {
             {assumptions.map((assumption) => (
               <div
                 key={assumption.id}
-                className={`p-4 border rounded-xl transition-all ${assumption.isConfirmed
+                className={`p-4 border rounded-xl transition-all ${
+                  assumption.isConfirmed
                     ? "border-green-500/50 bg-green-500/5"
                     : "border-zinc-800 bg-zinc-900"
-                  }`}
+                }`}
               >
                 <p className="text-sm text-zinc-400 mb-2">
                   {assumption.label} Assumption
@@ -264,10 +268,11 @@ export default function MomentumApp() {
           <button
             onClick={handleGeneratePlan}
             disabled={!allAssumptionsConfirmed || isGeneratingPlan}
-            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${!allAssumptionsConfirmed || isGeneratingPlan
+            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${
+              !allAssumptionsConfirmed || isGeneratingPlan
                 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                 : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
-              }`}
+            }`}
           >
             {isGeneratingPlan
               ? "Building Strategy..."
@@ -363,10 +368,11 @@ export default function MomentumApp() {
               />
 
               <button
-                className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${isTaskApproved
+                className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${
+                  isTaskApproved
                     ? "bg-green-600 text-white cursor-default"
                     : "bg-blue-600 text-white hover:bg-blue-500"
-                  }`}
+                }`}
                 onClick={handleApproveTask}
                 disabled={isTaskApproved}
               >
