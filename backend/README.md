@@ -2,8 +2,6 @@
 
 Momentum is a Cognitive Translation Layer built for the USAII Global AI Hackathon 2026. It takes unstructured, emotionally driven user brain dumps, surfaces operational assumptions through an interactive validation gate, and generates broad trajectory plans with a single hyper-specific first action.
 
----
-
 ## What We Have Done? (Completed)
 
 1. **FastAPI Application Framework**:
