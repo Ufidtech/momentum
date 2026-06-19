@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 const API_BASE_URL = "https://momentum-backend-qn65.onrender.com";
 
@@ -16,61 +16,8 @@ export default function MomentumApp() {
   });
   const [assumptions, setAssumptions] = useState([]);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-
   const [plan, setPlan] = useState(null);
   const [isTaskApproved, setIsTaskApproved] = useState(false);
-
-  const [localMetadata, setLocalMetadata] = useState({
-    sentiment_score: 0.5,
-    word_count: 0,
-    char_count: 0,
-  });
-
-  const worker = useRef(null);
-  const requestIdRef = useRef(0);
-  const pendingRequestsRef = useRef(new Map());
-
-  useEffect(() => {
-    const aiWorker = new Worker(new URL("../lib/worker.js", import.meta.url), {
-      type: "module",
-    });
-
-    aiWorker.addEventListener("message", (event) => {
-      const { id, ok, payload, error } = event.data || {};
-      const pending = pendingRequestsRef.current.get(id);
-
-      if (!pending) return;
-
-      if (ok) {
-        pending.resolve(payload);
-      } else {
-        pending.reject(new Error(error || "Worker failed"));
-      }
-
-      pendingRequestsRef.current.delete(id);
-    });
-
-    worker.current = aiWorker;
-
-    return () => {
-      aiWorker.terminate();
-      worker.current = null;
-      pendingRequestsRef.current.clear();
-    };
-  }, []);
-
-  const analyzeLocally = (text) => {
-    return new Promise((resolve, reject) => {
-      if (!worker.current) {
-        reject(new Error("Worker not ready"));
-        return;
-      }
-
-      const id = ++requestIdRef.current;
-      pendingRequestsRef.current.set(id, { resolve, reject });
-      worker.current.postMessage({ id, text });
-    });
-  };
 
   const renderMockData = () => {
     setConfidenceData({
@@ -99,13 +46,14 @@ export default function MomentumApp() {
     if (!brainDump.trim()) return;
 
     setIsAnalyzing(true);
-    setLoadingMessage("Analyzing locally...");
+    setLoadingMessage("Connecting to AI Layer...");
 
     try {
-      const localData = await analyzeLocally(brainDump);
-      setLocalMetadata(localData);
-
-      setLoadingMessage("Connecting to AI Layer...");
+      // Replaced the Web Worker with instant local calculations
+      const localData = {
+        sentiment_score: 0.5,
+        word_count: brainDump.split(/\s+/).filter((w) => w.length > 0).length,
+      };
 
       const response = await fetch(`${API_BASE_URL}/analyze-ambiguity/`, {
         method: "POST",
@@ -142,7 +90,7 @@ export default function MomentumApp() {
       setIsAnalyzing(false);
       setCurrentScreen(2);
     } catch (error) {
-      console.error("Connection or worker error:", error);
+      console.error("Connection error:", error);
       renderMockData();
     }
   };
@@ -150,31 +98,19 @@ export default function MomentumApp() {
   const handleUpdateAssumption = (id, newValue) => {
     setAssumptions((prev) =>
       prev.map((a) =>
-        a.id === id
-          ? {
-            ...a,
-            value: newValue,
-            isConfirmed: false,
-          }
-          : a
+        a.id === id ? { ...a, value: newValue, isConfirmed: false } : a
       )
     );
   };
 
   const handleConfirmAssumption = (id) => {
     setAssumptions((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? {
-            ...a,
-            isConfirmed: true,
-          }
-          : a
-      )
+      prev.map((a) => (a.id === id ? { ...a, isConfirmed: true } : a))
     );
   };
 
-  const allAssumptionsConfirmed = assumptions.every((a) => a.isConfirmed);
+  const allAssumptionsConfirmed =
+    assumptions.length > 0 && assumptions.every((a) => a.isConfirmed);
 
   const handleGeneratePlan = async () => {
     if (!allAssumptionsConfirmed) return;
@@ -216,7 +152,6 @@ export default function MomentumApp() {
       setIsGeneratingPlan(false);
     } catch (error) {
       console.error("API Error during plan generation:", error);
-
       setPlan({
         milestones: {
           day30: "Validate core idea",
@@ -226,7 +161,6 @@ export default function MomentumApp() {
         micro_task:
           "Write 3 sentences describing your idea and send to one person.",
       });
-
       setIsTaskApproved(false);
       setCurrentScreen(3);
       setIsGeneratingPlan(false);
@@ -253,7 +187,7 @@ export default function MomentumApp() {
           <textarea
             value={brainDump}
             onChange={(e) => setBrainDump(e.target.value)}
-            placeholder="I want to start a... but I&apos;m worried about..."
+            placeholder="I want to start a... but I'm worried about..."
             className="w-full h-64 p-6 bg-zinc-900 border border-zinc-800 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all placeholder:text-zinc-600"
           />
 
@@ -328,7 +262,9 @@ export default function MomentumApp() {
             disabled={!allAssumptionsConfirmed || isGeneratingPlan}
             className="w-full mt-4 px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {isGeneratingPlan ? "Building Strategy..." : "Generate Action Horizon"}
+            {isGeneratingPlan
+              ? "Building Strategy..."
+              : "Generate Action Horizon"}
           </button>
 
           {!allAssumptionsConfirmed && (
