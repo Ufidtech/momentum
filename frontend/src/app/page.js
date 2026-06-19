@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = "https://momentum-backend-qn65.onrender.com";
 
 export default function MomentumApp() {
   const [currentScreen, setCurrentScreen] = useState(1);
@@ -107,11 +107,7 @@ export default function MomentumApp() {
 
       setLoadingMessage("Connecting to AI Layer...");
 
-<<<<<<< HEAD
-      const response = await fetch("https://momentum-backend-qn65.onrender.com/analyze-ambiguity/", {
-=======
       const response = await fetch(`${API_BASE_URL}/analyze-ambiguity/`, {
->>>>>>> 265a62a80e05ed11951438e3b82ba3b616019d60
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -186,11 +182,7 @@ export default function MomentumApp() {
     setIsGeneratingPlan(true);
 
     try {
-<<<<<<< HEAD
-      const response = await fetch("https://momentum-backend-qn65.onrender.com/generate-plan/", {
-=======
       const response = await fetch(`${API_BASE_URL}/generate-plan/`, {
->>>>>>> 265a62a80e05ed11951438e3b82ba3b616019d60
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -299,8 +291,8 @@ export default function MomentumApp() {
               <div
                 key={assumption.id}
                 className={`p-4 border rounded-xl transition-all ${assumption.isConfirmed
-                  ? "border-green-500/50 bg-green-500/5"
-                  : "border-zinc-800 bg-zinc-900"
+                    ? "border-green-500/50 bg-green-500/5"
+                    : "border-zinc-800 bg-zinc-900"
                   }`}
               >
                 <p className="text-sm text-zinc-400 mb-2">
@@ -429,8 +421,8 @@ export default function MomentumApp() {
 
               <button
                 className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${isTaskApproved
-                  ? "bg-green-600 text-white cursor-default"
-                  : "bg-blue-600 text-white hover:bg-blue-500"
+                    ? "bg-green-600 text-white cursor-default"
+                    : "bg-blue-600 text-white hover:bg-blue-500"
                   }`}
                 onClick={handleApproveTask}
                 disabled={isTaskApproved}
