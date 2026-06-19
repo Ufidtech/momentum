@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
+from google import genai
+from google.genai import types
 
 # load environment variables from .env file
 load_dotenv()
@@ -85,12 +87,17 @@ Rules:
 Output format (JSON only, no markdown):
 { "milestones": { "day30": "Validate the core idea with 3 real people", "day60": "Build or wireframe a minimal version", "day90": "Share publicly or test with a small group" }, "micro_task": "Write 3 sentences describing your idea and send it to one person you trust for honest feedback." }"""
 
+# global client instance cache
+_gemini_client = None
+
 def get_gemini_client():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
-    from google import genai
-    return genai.Client(api_key=api_key)
+    global _gemini_client
+    if _gemini_client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
+        _gemini_client = genai.Client(api_key=api_key)
+    return _gemini_client
 
 def clean_json_response(text: str) -> str:
     cleaned = text.strip()
@@ -127,7 +134,6 @@ Word Count: {request.word_count}
 {request.brain_dump}"""
 
     try:
-        from google.genai import types
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents=user_content,
@@ -200,7 +206,6 @@ async def generate_plan(request: PlanRequest):
 {resolved_str}"""
 
     try:
-        from google.genai import types
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents=user_content,
