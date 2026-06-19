@@ -187,6 +187,7 @@ export default function MomentumApp() {
           <textarea
             value={brainDump}
             onChange={(e) => setBrainDump(e.target.value)}
+            onInput={(e) => setBrainDump(e.target.value)}
             placeholder="I want to start a... but I'm worried about..."
             className="w-full h-64 p-6 bg-zinc-900 border border-zinc-800 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all placeholder:text-zinc-600"
           />
@@ -198,7 +199,10 @@ export default function MomentumApp() {
             <button
               onClick={handleAnalyzeThoughts}
               disabled={!brainDump.trim() || isAnalyzing}
-              className="px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className={`px-6 py-3 font-medium rounded-lg transition-all ${!brainDump.trim() || isAnalyzing
+                  ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                  : "bg-white text-black active:bg-zinc-300"
+                }`}
             >
               {isAnalyzing ? loadingMessage : "Analyze My Thoughts"}
             </button>
@@ -260,7 +264,10 @@ export default function MomentumApp() {
           <button
             onClick={handleGeneratePlan}
             disabled={!allAssumptionsConfirmed || isGeneratingPlan}
-            className="w-full mt-4 px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${!allAssumptionsConfirmed || isGeneratingPlan
+                ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
+              }`}
           >
             {isGeneratingPlan
               ? "Building Strategy..."
