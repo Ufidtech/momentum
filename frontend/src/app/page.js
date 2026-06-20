@@ -193,11 +193,12 @@ export default function MomentumApp() {
             </p>
           </div>
 
-          <textarea
+         <textarea
             value={brainDump}
             onChange={(e) => setBrainDump(e.target.value)}
-            onInput={(e) => setBrainDump(e.target.value)}
             placeholder="I want to start a... but I'm worried about..."
+            spellCheck="false"
+            autoComplete="off"
             className="w-full h-64 p-6 bg-zinc-900 border border-zinc-800 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all placeholder:text-zinc-600"
           />
 
