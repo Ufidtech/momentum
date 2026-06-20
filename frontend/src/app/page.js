@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API_BASE_URL = "https://momentum-backend-qn65.onrender.com";
 
@@ -18,8 +18,94 @@ export default function MomentumApp() {
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [plan, setPlan] = useState(null);
   const [isTaskApproved, setIsTaskApproved] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  // --- Edge AI worker (Transformers.js, runs locally in-browser) ---
+  const workerRef = useRef(null);
+  const pendingRequests = useRef(new Map());
+
+  useEffect(() => {
+    // Pre-warm the backend the moment the page loads. Free-tier hosts
+    // (Render, etc.) sleep after inactivity and can take 30-60s to wake
+    // on a cold request — firing this early, while the user is still
+    // typing, hides most of that latency by the time they hit submit.
+    fetch(`${API_BASE_URL}/`).catch(() => {
+      // Ignore errors here — handleAnalyzeThoughts has its own fallback
+      // if the backend is still genuinely unreachable later.
+    });
+  }, []);
+
+  useEffect(() => {
+    // Spin up the worker once, client-side only.
+    workerRef.current = new Worker(
+      new URL("../lib/worker.js", import.meta.url)
+    );
+
+    workerRef.current.onmessage = (event) => {
+      const { id, ok, payload, error } = event.data || {};
+      const pending = pendingRequests.current.get(id);
+      if (!pending) return;
+      pendingRequests.current.delete(id);
+      if (ok) {
+        pending.resolve(payload);
+      } else {
+        pending.reject(new Error(error || "Worker analysis failed"));
+      }
+    };
+
+    workerRef.current.onerror = (err) => {
+      pendingRequests.current.forEach(({ reject }) => reject(err));
+      pendingRequests.current.clear();
+    };
+
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  // Runs local embedding/sentiment extraction in the Web Worker.
+  // Falls back to a lightweight local heuristic if the worker isn't ready,
+  // errors out, or takes too long (e.g. slow first-time model download),
+  // so the UI never blocks on the edge-AI step.
+  const runLocalAnalysis = (text) => {
+    return new Promise((resolve) => {
+      const fallback = () => {
+        resolve({
+          sentiment_score: 0.5,
+          word_count: text.split(/\s+/).filter((w) => w.length > 0).length,
+          char_count: text.length,
+        });
+      };
+
+      if (!workerRef.current) {
+        fallback();
+        return;
+      }
+
+      const id = `${Date.now()}-${Math.random()}`;
+      const timeout = setTimeout(() => {
+        pendingRequests.current.delete(id);
+        fallback();
+      }, 8000);
+
+      pendingRequests.current.set(id, {
+        resolve: (payload) => {
+          clearTimeout(timeout);
+          resolve(payload);
+        },
+        reject: () => {
+          clearTimeout(timeout);
+          fallback();
+        },
+      });
+
+      workerRef.current.postMessage({ id, text });
+    });
+  };
 
   const renderMockData = () => {
+    setIsDemoMode(true);
     setConfidenceData({
       score: 7,
       reason: "High potential (Demo Mode)",
@@ -46,13 +132,15 @@ export default function MomentumApp() {
     if (!brainDump.trim()) return;
 
     setIsAnalyzing(true);
-    setLoadingMessage("Connecting to AI Layer...");
+    setIsDemoMode(false);
+    setLoadingMessage("Running local AI analysis...");
 
     try {
-      const localData = {
-        sentiment_score: 0.5,
-        word_count: brainDump.split(/\s+/).filter((w) => w.length > 0).length,
-      };
+      // Edge AI step: real local sentiment/embedding extraction via Transformers.js,
+      // running entirely in the browser before anything hits the network.
+      const localData = await runLocalAnalysis(brainDump);
+
+      setLoadingMessage("Connecting to AI Layer...");
 
       const response = await fetch(`${API_BASE_URL}/analyze-ambiguity/`, {
         method: "POST",
@@ -151,6 +239,7 @@ export default function MomentumApp() {
       setIsGeneratingPlan(false);
     } catch (error) {
       console.error("API Error during plan generation:", error);
+      setIsDemoMode(true);
       setPlan({
         milestones: {
           day30: "Validate core idea",
@@ -180,6 +269,7 @@ export default function MomentumApp() {
     setIsAnalyzing(false);
     setIsGeneratingPlan(false);
     setLoadingMessage("Processing...");
+    setIsDemoMode(false);
   };
 
   return (
@@ -213,11 +303,10 @@ export default function MomentumApp() {
                 if (!brainDump.trim() || isAnalyzing) return;
                 handleAnalyzeThoughts();
               }}
-              className={`px-6 py-3 font-medium rounded-lg transition-all ${
-                !brainDump.trim() || isAnalyzing
+              className={`px-6 py-3 font-medium rounded-lg transition-all ${!brainDump.trim() || isAnalyzing
                   ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
-              }`}
+                }`}
             >
               {isAnalyzing ? loadingMessage : "Analyze My Thoughts"}
             </button>
@@ -231,6 +320,11 @@ export default function MomentumApp() {
             <h2 className="text-2xl font-medium text-white mb-2">
               Ambiguity Ledger
             </h2>
+            {isDemoMode && (
+              <div className="mb-2 inline-block px-3 py-1 text-xs font-bold uppercase tracking-wide bg-orange-500/10 text-orange-400 rounded-full border border-orange-500/30">
+                Demo Mode — sample output (live AI unreachable)
+              </div>
+            )}
             <div className="inline-block px-4 py-2 bg-yellow-500/10 text-yellow-500 rounded-lg border border-yellow-500/20">
               Confidence: {confidenceData.score}/10 — {confidenceData.reason}
             </div>
@@ -243,11 +337,10 @@ export default function MomentumApp() {
             {assumptions.map((assumption) => (
               <div
                 key={assumption.id}
-                className={`p-4 border rounded-xl transition-all ${
-                  assumption.isConfirmed
+                className={`p-4 border rounded-xl transition-all ${assumption.isConfirmed
                     ? "border-green-500/50 bg-green-500/5"
                     : "border-zinc-800 bg-zinc-900"
-                }`}
+                  }`}
               >
                 <p className="text-sm text-zinc-400 mb-2">
                   {assumption.label} Assumption
@@ -280,11 +373,10 @@ export default function MomentumApp() {
           <button
             onClick={handleGeneratePlan}
             disabled={!allAssumptionsConfirmed || isGeneratingPlan}
-            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${
-              !allAssumptionsConfirmed || isGeneratingPlan
+            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${!allAssumptionsConfirmed || isGeneratingPlan
                 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                 : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
-            }`}
+              }`}
           >
             {isGeneratingPlan
               ? "Building Strategy..."
@@ -306,6 +398,11 @@ export default function MomentumApp() {
             <p className="text-zinc-400">
               Your custom execution trajectory.
             </p>
+            {isDemoMode && (
+              <div className="mt-3 inline-block px-3 py-1 text-xs font-bold uppercase tracking-wide bg-orange-500/10 text-orange-400 rounded-full border border-orange-500/30">
+                Demo Mode — sample output (live AI unreachable)
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -380,11 +477,10 @@ export default function MomentumApp() {
               />
 
               <button
-                className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${
-                  isTaskApproved
+                className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${isTaskApproved
                     ? "bg-green-600 text-white cursor-default"
                     : "bg-blue-600 text-white hover:bg-blue-500"
-                }`}
+                  }`}
                 onClick={handleApproveTask}
                 disabled={isTaskApproved}
               >
@@ -392,7 +488,7 @@ export default function MomentumApp() {
               </button>
             </div>
           </div>
-          
+
           <div className="flex justify-center mt-8">
             <button
               onClick={handleStartOver}

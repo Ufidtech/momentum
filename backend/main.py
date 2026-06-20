@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
 from google import genai
 from google.genai import types
 
@@ -44,7 +43,7 @@ class AssumptionCard(BaseModel):
 class AmbiguityResponse(BaseModel):
     confidence_score: int
     confidence_reason: str
-    assumptions: List[AssumptionCard]
+    assumptions: list[AssumptionCard]
 
 class ResolvedAssumption(BaseModel):
     id: int
@@ -52,7 +51,7 @@ class ResolvedAssumption(BaseModel):
 
 class PlanRequest(BaseModel):
     brain_dump: str = Field(..., description="The raw unstructured brain dump text.")
-    resolved_assumptions: List[ResolvedAssumption] = Field(..., description="The user-resolved assumptions.")
+    resolved_assumptions: list[ResolvedAssumption] = Field(..., description="The user-resolved assumptions.")
 
 class Milestones(BaseModel):
     day30: str
