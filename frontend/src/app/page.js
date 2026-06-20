@@ -225,9 +225,9 @@ export default function MomentumApp() {
 
       setPlan({
         milestones: {
-          day30: data.milestones?.day30 || "Validate with 3 real people",
-          day60: data.milestones?.day60 || "Build minimal wireframe",
-          day90: data.milestones?.day90 || "Launch/public test",
+          phase1: data.milestones?.phase1 || "Validate with 3 real people",
+          phase2: data.milestones?.phase2 || "Build minimal wireframe",
+          phase3: data.milestones?.phase3 || "Launch/public test",
         },
         micro_task:
           data.micro_task ||
@@ -242,9 +242,9 @@ export default function MomentumApp() {
       setIsDemoMode(true);
       setPlan({
         milestones: {
-          day30: "Validate core idea",
-          day60: "Build MVP",
-          day90: "Launch",
+          phase1: "Validate core idea",
+          phase2: "Build MVP",
+          phase3: "Launch",
         },
         micro_task:
           "Write 3 sentences describing your idea and send to one person.",
@@ -415,11 +415,11 @@ export default function MomentumApp() {
                 <div>
                   <p className="text-blue-400 font-mono text-sm mb-2">PHASE 1: IMMEDIATE</p>
                   <textarea
-                    value={plan.milestones.day30}
+                    value={plan.milestones.phase1}
                     onChange={(e) =>
                       setPlan((prev) => ({
                         ...prev,
-                        milestones: { ...prev.milestones, day30: e.target.value },
+                        milestones: { ...prev.milestones, phase1: e.target.value },
                       }))
                     }
                     className="w-full min-h-24 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white resize-none outline-none focus:border-blue-500"
@@ -429,11 +429,11 @@ export default function MomentumApp() {
                 <div>
                   <p className="text-blue-400 font-mono text-sm mb-2">PHASE 2: EXECUTION</p>
                   <textarea
-                    value={plan.milestones.day60}
+                    value={plan.milestones.phase2}
                     onChange={(e) =>
                       setPlan((prev) => ({
                         ...prev,
-                        milestones: { ...prev.milestones, day60: e.target.value },
+                        milestones: { ...prev.milestones, phase2: e.target.value },
                       }))
                     }
                     className="w-full min-h-24 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white resize-none outline-none focus:border-blue-500"
@@ -443,11 +443,11 @@ export default function MomentumApp() {
                 <div>
                   <p className="text-blue-400 font-mono text-sm mb-2">PHASE 3: TARGET GOAL</p>
                   <textarea
-                    value={plan.milestones.day90}
+                    value={plan.milestones.phase3}
                     onChange={(e) =>
                       setPlan((prev) => ({
                         ...prev,
-                        milestones: { ...prev.milestones, day90: e.target.value },
+                        milestones: { ...prev.milestones, phase3: e.target.value },
                       }))
                     }
                     className="w-full min-h-24 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white resize-none outline-none focus:border-blue-500"

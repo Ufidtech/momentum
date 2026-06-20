@@ -54,9 +54,9 @@ class PlanRequest(BaseModel):
     resolved_assumptions: list[ResolvedAssumption] = Field(..., description="The user-resolved assumptions.")
 
 class Milestones(BaseModel):
-    day30: str
-    day60: str
-    day90: str
+    phase1: str
+    phase2: str
+    phase3: str
 
 class PlanResponse(BaseModel):
     milestones: Milestones
@@ -81,10 +81,11 @@ Rules:
 - ALWAYS use: 'a possible path', 'based on your constraints', 'one option to explore'.
 - The micro_task must be completable in 15 minutes with no preparation.
 - The micro_task must name a specific output (a sentence, a text, a sketch, a number).
-- Milestones are trajectories, not instructions. Keep them broad and conditional.
+- Milestones are sequential PHASES, not fixed dates. Do NOT assign specific day counts, weeks, or deadlines — people move through phases at different speeds. Describe each phase by what gets accomplished, not by when.
+- Phase 1 is the immediate next move. Phase 2 builds on Phase 1 being done. Phase 3 is the broader target the first two phases lead toward. Keep them broad and conditional.
  
 Output format (JSON only, no markdown):
-{ "milestones": { "day30": "Validate the core idea with 3 real people", "day60": "Build or wireframe a minimal version", "day90": "Share publicly or test with a small group" }, "micro_task": "Write 3 sentences describing your idea and send it to one person you trust for honest feedback." }"""
+{ "milestones": { "phase1": "Validate the core idea with 3 real people", "phase2": "Build or wireframe a minimal version", "phase3": "Share publicly or test with a small group" }, "micro_task": "Write 3 sentences describing your idea and send it to one person you trust for honest feedback." }"""
 
 # global client instance cache
 _gemini_client = None
@@ -231,9 +232,9 @@ async def generate_plan(request: PlanRequest):
         logger.error(f"Failed to parse JSON from Gemini response: {e}")
         fallback = {
             "milestones": {
-                "day30": "A possible path is to draft a basic concept paper.",
-                "day60": "Based on your constraints, one option to explore is wireframing a user flow.",
-                "day90": "A potential path is sharing a simple mockup with a small group of trusted peers."
+                "phase1": "A possible path is to draft a basic concept paper.",
+                "phase2": "Based on your constraints, one option to explore is wireframing a user flow.",
+                "phase3": "A potential path is sharing a simple mockup with a small group of trusted peers."
             },
             "micro_task": "Write exactly 3 sentences describing the core idea and save it to a local file."
         }
