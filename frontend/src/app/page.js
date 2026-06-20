@@ -170,7 +170,6 @@ export default function MomentumApp() {
     setIsTaskApproved(true);
   };
 
-  // Hadiza Fix 1: The reset function
   const handleStartOver = () => {
     setBrainDump("");
     setAssumptions([]);
@@ -178,6 +177,9 @@ export default function MomentumApp() {
     setIsTaskApproved(false);
     setConfidenceData({ score: 0, reason: "" });
     setCurrentScreen(1);
+    setIsAnalyzing(false);
+    setIsGeneratingPlan(false);
+    setLoadingMessage("Processing...");
   };
 
   return (
@@ -193,12 +195,12 @@ export default function MomentumApp() {
             </p>
           </div>
 
-         <textarea
+          <textarea
             value={brainDump}
             onChange={(e) => setBrainDump(e.target.value)}
-            placeholder="I want to start a... but I'm worried about..."
             spellCheck="false"
             autoComplete="off"
+            placeholder="I want to start a... but I'm worried about..."
             className="w-full h-64 p-6 bg-zinc-900 border border-zinc-800 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all placeholder:text-zinc-600"
           />
 
@@ -211,10 +213,11 @@ export default function MomentumApp() {
                 if (!brainDump.trim() || isAnalyzing) return;
                 handleAnalyzeThoughts();
               }}
-              className={`px-6 py-3 font-medium rounded-lg transition-all ${!brainDump.trim() || isAnalyzing
+              className={`px-6 py-3 font-medium rounded-lg transition-all ${
+                !brainDump.trim() || isAnalyzing
                   ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
-                }`}
+              }`}
             >
               {isAnalyzing ? loadingMessage : "Analyze My Thoughts"}
             </button>
@@ -240,10 +243,11 @@ export default function MomentumApp() {
             {assumptions.map((assumption) => (
               <div
                 key={assumption.id}
-                className={`p-4 border rounded-xl transition-all ${assumption.isConfirmed
+                className={`p-4 border rounded-xl transition-all ${
+                  assumption.isConfirmed
                     ? "border-green-500/50 bg-green-500/5"
                     : "border-zinc-800 bg-zinc-900"
-                  }`}
+                }`}
               >
                 <p className="text-sm text-zinc-400 mb-2">
                   {assumption.label} Assumption
@@ -276,10 +280,11 @@ export default function MomentumApp() {
           <button
             onClick={handleGeneratePlan}
             disabled={!allAssumptionsConfirmed || isGeneratingPlan}
-            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${!allAssumptionsConfirmed || isGeneratingPlan
+            className={`w-full mt-4 px-6 py-3 font-medium rounded-lg transition-all ${
+              !allAssumptionsConfirmed || isGeneratingPlan
                 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                 : "bg-white text-black active:bg-zinc-300 hover:bg-zinc-200"
-              }`}
+            }`}
           >
             {isGeneratingPlan
               ? "Building Strategy..."
@@ -311,8 +316,7 @@ export default function MomentumApp() {
 
               <div className="space-y-4">
                 <div>
-                  {/* Hadiza Fix 2: Changed to Phase 1 */}
-                  <p className="text-blue-400 font-mono text-sm mb-2">PHASE 1: IMMEDATE</p>
+                  <p className="text-blue-400 font-mono text-sm mb-2">PHASE 1: IMMEDIATE</p>
                   <textarea
                     value={plan.milestones.day30}
                     onChange={(e) =>
@@ -326,7 +330,6 @@ export default function MomentumApp() {
                 </div>
 
                 <div>
-                  {/* Hadiza Fix 2: Changed to Phase 2 */}
                   <p className="text-blue-400 font-mono text-sm mb-2">PHASE 2: EXECUTION</p>
                   <textarea
                     value={plan.milestones.day60}
@@ -341,7 +344,6 @@ export default function MomentumApp() {
                 </div>
 
                 <div>
-                  {/* Hadiza Fix 2: Changed to Phase 3 */}
                   <p className="text-blue-400 font-mono text-sm mb-2">PHASE 3: TARGET GOAL</p>
                   <textarea
                     value={plan.milestones.day90}
@@ -378,10 +380,11 @@ export default function MomentumApp() {
               />
 
               <button
-                className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${isTaskApproved
+                className={`mt-auto w-full px-6 py-4 font-medium rounded-lg transition-all ${
+                  isTaskApproved
                     ? "bg-green-600 text-white cursor-default"
                     : "bg-blue-600 text-white hover:bg-blue-500"
-                  }`}
+                }`}
                 onClick={handleApproveTask}
                 disabled={isTaskApproved}
               >
@@ -389,8 +392,7 @@ export default function MomentumApp() {
               </button>
             </div>
           </div>
-
-          {/* Hadiza Fix 1: The Restart Button UI */}
+          
           <div className="flex justify-center mt-8">
             <button
               onClick={handleStartOver}
