@@ -23,7 +23,7 @@ app = FastAPI(title="Momentum Core API", version="1.0.0")
 # CORS access for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://momentum-rho-lac.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
