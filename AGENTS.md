@@ -15,7 +15,7 @@ The app is a decoupled 3-stage single-page application pipeline.
 
 1. **Screen 1: Brain Dump**: A minimalist, dark-themed page centered around a single massive text field. Runs local sentiment analysis via `Transformers.js` (`Xenova/all-MiniLM-L6-v2`) before calling the backend.
 2. **Screen 2: Ambiguity Ledger**: Shows an AI confidence score and 2-3 interactive assumption cards. The UI must hard-code a block preventing the user from moving forward until they manually confirm or edit every single card.
-3. **Screen 3: Action Horizon**: A split-pane screen showing a broad 30/60/90-day trajectory on the left, and exactly ONE 15-minute concrete micro-task on the right.
+3. **Screen 3: Action Horizon**: A split-pane screen showing a sequential 3-phase trajectory on the left (Phase 1: immediate next move, Phase 2: builds on Phase 1, Phase 3: the broader target — no fixed day counts or deadlines, since people progress at different speeds), and exactly ONE 15-minute concrete micro-task on the right, claimed via a live 15-minute commitment timer with an optional on-device before/after reflection check.
 
 ## Responsible AI Style Guidelines
 

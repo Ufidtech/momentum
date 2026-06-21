@@ -20,6 +20,16 @@ export default function MomentumApp() {
   const [isTaskApproved, setIsTaskApproved] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
+  // --- Commitment timer + before/after reflection (all local, on-device) ---
+  const TASK_SECONDS = 15 * 60;
+  const [initialSentimentScore, setInitialSentimentScore] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(TASK_SECONDS);
+  const [timerActive, setTimerActive] = useState(false);
+  const [taskOutcome, setTaskOutcome] = useState(null); // null | "time_up" | "done"
+  const [reflectionText, setReflectionText] = useState("");
+  const [finalSentimentScore, setFinalSentimentScore] = useState(null);
+  const [isAnalyzingReflection, setIsAnalyzingReflection] = useState(false);
+
   // --- Edge AI worker (Transformers.js, runs locally in-browser) ---
   const workerRef = useRef(null);
   const pendingRequests = useRef(new Map());
@@ -36,33 +46,63 @@ export default function MomentumApp() {
   }, []);
 
   useEffect(() => {
-    // Spin up the worker once, client-side only.
-    workerRef.current = new Worker(
-      new URL("../lib/worker.js", import.meta.url)
-    );
+    // Spin up the worker once, client-side only. Wrapped in try/catch so
+    // that if Worker creation fails for any reason (unsupported browser,
+    // restrictive in-app webview, bundler mismatch), it never breaks
+    // hydration of the rest of the page — runLocalAnalysis already
+    // falls back gracefully when workerRef.current is null.
+    try {
+      workerRef.current = new Worker(
+        new URL("../lib/worker.js", import.meta.url)
+      );
 
-    workerRef.current.onmessage = (event) => {
-      const { id, ok, payload, error } = event.data || {};
-      const pending = pendingRequests.current.get(id);
-      if (!pending) return;
-      pendingRequests.current.delete(id);
-      if (ok) {
-        pending.resolve(payload);
-      } else {
-        pending.reject(new Error(error || "Worker analysis failed"));
-      }
-    };
+      workerRef.current.onmessage = (event) => {
+        const { id, ok, payload, error } = event.data || {};
+        const pending = pendingRequests.current.get(id);
+        if (!pending) return;
+        pendingRequests.current.delete(id);
+        if (ok) {
+          pending.resolve(payload);
+        } else {
+          pending.reject(new Error(error || "Worker analysis failed"));
+        }
+      };
 
-    workerRef.current.onerror = (err) => {
-      pendingRequests.current.forEach(({ reject }) => reject(err));
-      pendingRequests.current.clear();
-    };
+      workerRef.current.onerror = (err) => {
+        console.error("Edge AI worker error:", err);
+        pendingRequests.current.forEach(({ reject }) => reject(err));
+        pendingRequests.current.clear();
+      };
+    } catch (err) {
+      console.error("Failed to initialize Edge AI worker:", err);
+      workerRef.current = null;
+    }
 
     return () => {
       workerRef.current?.terminate();
       workerRef.current = null;
     };
   }, []);
+
+  // Ticks the 15-minute commitment timer down once per second while active.
+  useEffect(() => {
+    if (!timerActive) return;
+    if (timeRemaining <= 0) {
+      setTimerActive(false);
+      setTaskOutcome("time_up");
+      return;
+    }
+    const tick = setTimeout(() => setTimeRemaining((t) => t - 1), 1000);
+    return () => clearTimeout(tick);
+  }, [timerActive, timeRemaining]);
+
+  const formatTime = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   // Runs local embedding/sentiment extraction in the Web Worker.
   // Falls back to a lightweight local heuristic if the worker isn't ready,
@@ -139,6 +179,7 @@ export default function MomentumApp() {
       // Edge AI step: real local sentiment/embedding extraction via Transformers.js,
       // running entirely in the browser before anything hits the network.
       const localData = await runLocalAnalysis(brainDump);
+      setInitialSentimentScore(localData.sentiment_score);
 
       setLoadingMessage("Connecting to AI Layer...");
 
@@ -257,6 +298,38 @@ export default function MomentumApp() {
 
   const handleApproveTask = () => {
     setIsTaskApproved(true);
+    setTimeRemaining(TASK_SECONDS);
+    setTimerActive(true);
+    setTaskOutcome(null);
+  };
+
+  const handleExtendTimer = () => {
+    setTimeRemaining(TASK_SECONDS);
+    setTimerActive(true);
+    setTaskOutcome(null);
+  };
+
+  const handleMarkDone = () => {
+    setTimerActive(false);
+    setTaskOutcome("done");
+  };
+
+  const handleSubmitReflection = async () => {
+    if (!reflectionText.trim()) {
+      setTaskOutcome("closed");
+      return;
+    }
+    setIsAnalyzingReflection(true);
+    // Reuses the exact same on-device model as the brain dump step.
+    // This comparison never leaves the browser — no network call here.
+    const result = await runLocalAnalysis(reflectionText);
+    setFinalSentimentScore(result.sentiment_score);
+    setIsAnalyzingReflection(false);
+    setTaskOutcome("closed");
+  };
+
+  const handleSkipReflection = () => {
+    setTaskOutcome("closed");
   };
 
   const handleStartOver = () => {
@@ -270,6 +343,13 @@ export default function MomentumApp() {
     setIsGeneratingPlan(false);
     setLoadingMessage("Processing...");
     setIsDemoMode(false);
+    setInitialSentimentScore(null);
+    setTimeRemaining(TASK_SECONDS);
+    setTimerActive(false);
+    setTaskOutcome(null);
+    setReflectionText("");
+    setFinalSentimentScore(null);
+    setIsAnalyzingReflection(false);
   };
 
   return (
@@ -486,6 +566,116 @@ export default function MomentumApp() {
               >
                 {isTaskApproved ? "Task Approved" : "Approve & Claim Task"}
               </button>
+
+              {isTaskApproved && taskOutcome === null && (
+                <div className="mt-2 p-5 rounded-lg bg-green-500/10 border border-green-500/30 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <p className="text-green-400 font-medium mb-2">
+                    You&apos;re in motion.
+                  </p>
+                  <p className="text-4xl font-mono font-bold text-white tracking-wider tabular-nums">
+                    {formatTime(timeRemaining)}
+                  </p>
+                  <p className="text-sm text-zinc-400 mt-2">
+                    Your first step is claimed — go take it now.
+                  </p>
+                  <button
+                    onClick={handleMarkDone}
+                    className="mt-4 text-sm text-blue-400 hover:text-blue-300 underline underline-offset-4"
+                  >
+                    I finished early
+                  </button>
+                </div>
+              )}
+
+              {taskOutcome === "time_up" && (
+                <div className="mt-2 p-5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <p className="text-yellow-400 font-medium mb-3">
+                    Time&apos;s up. Did you do it?
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={handleMarkDone}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-all"
+                    >
+                      Yes, done
+                    </button>
+                    <button
+                      onClick={handleExtendTimer}
+                      className="px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-all"
+                    >
+                      Need 15 more
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {taskOutcome === "done" && (
+                <div className="mt-2 p-5 rounded-lg bg-green-500/10 border border-green-500/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <p className="text-green-400 font-medium text-center mb-3">
+                    Nice work. That&apos;s momentum.
+                  </p>
+                  <p className="text-xs text-zinc-500 text-center mb-3">
+                    Optional: how do you feel right now? This stays on your
+                    device only — it&apos;s never sent anywhere.
+                  </p>
+                  <textarea
+                    value={reflectionText}
+                    onChange={(e) => setReflectionText(e.target.value)}
+                    placeholder="A sentence or two, if you want..."
+                    className="w-full min-h-16 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-white resize-none outline-none focus:border-blue-500"
+                  />
+                  <div className="flex gap-3 justify-center mt-3">
+                    <button
+                      onClick={handleSubmitReflection}
+                      disabled={isAnalyzingReflection}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-all disabled:opacity-50"
+                    >
+                      {isAnalyzingReflection
+                        ? "Analyzing locally..."
+                        : "Compare to start"}
+                    </button>
+                    <button
+                      onClick={handleSkipReflection}
+                      className="px-4 py-2 text-sm text-zinc-500 hover:text-white transition-all"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {taskOutcome === "closed" && (
+                <div className="mt-2 p-5 rounded-lg bg-green-500/10 border border-green-500/30 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <p className="text-green-400 font-medium">
+                    {finalSentimentScore !== null &&
+                      initialSentimentScore !== null
+                      ? "Logged. That's real momentum."
+                      : "Nice work. That's momentum."}
+                  </p>
+                  {finalSentimentScore !== null &&
+                    initialSentimentScore !== null && (
+                      <div className="mt-3 flex items-center justify-center gap-4">
+                        <div>
+                          <p className="text-xs text-zinc-500 uppercase tracking-wide">
+                            Before
+                          </p>
+                          <p className="text-lg font-mono text-white">
+                            {initialSentimentScore.toFixed(2)}
+                          </p>
+                        </div>
+                        <span className="text-zinc-600">→</span>
+                        <div>
+                          <p className="text-xs text-zinc-500 uppercase tracking-wide">
+                            After
+                          </p>
+                          <p className="text-lg font-mono text-white">
+                            {finalSentimentScore.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
           </div>
 
